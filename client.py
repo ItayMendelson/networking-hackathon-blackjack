@@ -140,7 +140,7 @@ class BlackjackClient:
                 result = self.udp_listener.wait_for_offer()
                 
                 if result is None:
-                    print("⏰ No server found. Retrying...")
+                    print("⏰ No server found. Please try again :)")
                     continue
                 
                 server_ip, offer = result

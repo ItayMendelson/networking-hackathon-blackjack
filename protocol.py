@@ -135,7 +135,7 @@ def encode_client_payload(decision: str) -> bytes:
     Format:
     - Magic cookie (4 bytes): 0xabcddcba
     - Message type (1 byte): 0x04
-    - Decision (5 bytes): "Hittt" or "Stand"
+    - Decision (5 bytes): "Hit" or "Stand"
     
     Args:
         decision: Either "hit" or "stand" (case-insensitive)

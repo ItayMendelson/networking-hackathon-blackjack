@@ -43,7 +43,7 @@ RESULT_WIN = 0x03
 RESULT_DISCONNECTED = -1  # Used when connection is lost
 
 # Player decisions (5 bytes each, as per spec)
-DECISION_HIT = b"Hittt"
+DECISION_HIT = b"Hit"
 DECISION_STAND = b"Stand"
 
 # Team name max length
@@ -116,8 +116,8 @@ BUST_THRESHOLD = 21
 # Timeout for waiting for UDP offer
 OFFER_TIMEOUT = 5.0
 
-# Timeout for TCP operations
-TCP_TIMEOUT = 10.0
+# Timeout for TCP operations (connection, initial card receive)
+TCP_TIMEOUT = 30.0
 
 # Timeout for player decision (give players time to think!)
 PLAYER_DECISION_TIMEOUT = 60.0

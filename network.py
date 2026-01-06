@@ -291,6 +291,10 @@ class TCPConnection:
     """
     Wraps a TCP socket with game-specific send/receive methods.
     Used by both client and server for clean communication.
+    
+    IMPORTANT: Uses buffered reading to handle TCP stream framing.
+    TCP may combine multiple sends into one receive, or split one send
+    into multiple receives. This class handles both cases correctly.
     """
     
     def __init__(self, sock: socket.socket, timeout: float = TCP_TIMEOUT):
@@ -304,6 +308,7 @@ class TCPConnection:
         self.socket = sock
         self.socket.settimeout(timeout)
         self._closed = False
+        self._buffer = b""  # Buffer for incomplete messages
     
     @classmethod
     def connect(cls, host: str, port: int, timeout: float = TCP_TIMEOUT) -> 'TCPConnection':
@@ -375,9 +380,42 @@ class TCPConnection:
             print(f"⚠️ Send error: {e}")
             return False
     
+    def receive_exact(self, num_bytes: int) -> Optional[bytes]:
+        """
+        Receive exactly the specified number of bytes.
+        Uses internal buffer to handle TCP stream framing.
+        
+        Args:
+            num_bytes: Exact number of bytes to receive
+            
+        Returns:
+            Exactly num_bytes bytes, or None on error/timeout
+        """
+        # Keep receiving until we have enough bytes in the buffer
+        while len(self._buffer) < num_bytes:
+            try:
+                chunk = self.socket.recv(TCP_BUFFER_SIZE)
+                if not chunk:
+                    # Connection closed
+                    return None
+                self._buffer += chunk
+            except socket.timeout:
+                return None
+            except ConnectionResetError:
+                return None
+            except Exception as e:
+                print(f"⚠️ Receive error: {e}")
+                return None
+        
+        # Extract the requested bytes from buffer
+        result = self._buffer[:num_bytes]
+        self._buffer = self._buffer[num_bytes:]
+        return result
+    
     def receive_raw(self, buffer_size: int = TCP_BUFFER_SIZE) -> Optional[bytes]:
         """
-        Receive raw bytes from the connection.
+        Receive raw bytes from the connection (for variable-length messages).
+        Note: For fixed-size messages, use receive_exact() instead.
         
         Args:
             buffer_size: Maximum bytes to receive
@@ -385,10 +423,20 @@ class TCPConnection:
         Returns:
             Received bytes, or None on error/timeout
         """
+        # If we have buffered data, return it first
+        if self._buffer:
+            result = self._buffer[:buffer_size]
+            self._buffer = self._buffer[buffer_size:]
+            return result
+        
         try:
             data = self.socket.recv(buffer_size)
-            return data if data else None
+            if not data:
+                return None
+            return data
         except socket.timeout:
+            return None
+        except ConnectionResetError:
             return None
         except Exception as e:
             print(f"⚠️ Receive error: {e}")
@@ -397,6 +445,9 @@ class TCPConnection:
     # =========================================================================
     # GAME REQUEST (Client → Server)
     # =========================================================================
+    
+    # Request message size: 4 (magic) + 1 (type) + 1 (rounds) + 32 (name) = 38 bytes
+    REQUEST_SIZE = 38
     
     def send_request(self, num_rounds: int, client_name: str) -> bool:
         """
@@ -419,7 +470,7 @@ class TCPConnection:
         Returns:
             RequestMessage if valid, None on error
         """
-        data = self.receive_raw()
+        data = self.receive_exact(self.REQUEST_SIZE)
         if data is None:
             return None
         return decode_request(data)
@@ -427,6 +478,9 @@ class TCPConnection:
     # =========================================================================
     # SERVER PAYLOAD (Server → Client)
     # =========================================================================
+    
+    # Server payload size: 4 (magic) + 1 (type) + 1 (result) + 2 (rank) + 1 (suit) = 9 bytes
+    SERVER_PAYLOAD_SIZE = 9
     
     def send_card(self, result: int, card_rank: int, card_suit: int) -> bool:
         """
@@ -462,7 +516,7 @@ class TCPConnection:
         Returns:
             ServerPayload if valid, None on error
         """
-        data = self.receive_raw()
+        data = self.receive_exact(self.SERVER_PAYLOAD_SIZE)
         if data is None:
             return None
         return decode_server_payload(data)
@@ -470,6 +524,9 @@ class TCPConnection:
     # =========================================================================
     # CLIENT PAYLOAD (Client → Server)
     # =========================================================================
+    
+    # Client payload size: 4 (magic) + 1 (type) + 5 (decision) = 10 bytes
+    CLIENT_PAYLOAD_SIZE = 10
     
     def send_decision(self, decision: str) -> bool:
         """
@@ -495,7 +552,7 @@ class TCPConnection:
         Returns:
             ClientPayload if valid, None on error
         """
-        data = self.receive_raw()
+        data = self.receive_exact(self.CLIENT_PAYLOAD_SIZE)
         if data is None:
             return None
         return decode_client_payload(data)

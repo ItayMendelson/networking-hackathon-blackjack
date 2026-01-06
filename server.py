@@ -193,13 +193,14 @@ class BlackjackServer:
             conn: The TCP connection wrapper
             client_addr: The client's address tuple
         """
-        print(f"🔗 New connection from {client_addr[0]}:{client_addr[1]}")
+        client_id = f"{client_addr[0]}:{client_addr[1]}"
+        print(f"🔗 New connection from {client_id}")
         
         try:
             # Receive the request message
             request = conn.receive_request()
             if request is None:
-                print(f"❌ {client_addr}: Invalid or empty request")
+                print(f"❌ [{client_id}] Invalid or empty request - client may have disconnected")
                 return
             
             client_name = request.client_name

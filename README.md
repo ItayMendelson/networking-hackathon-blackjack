@@ -88,7 +88,7 @@ python client.py "Player One"             # Custom team name
 |-------|------|-------------|
 | Magic Cookie | 4 bytes | `0xABCDDCBA` |
 | Message Type | 1 byte | `0x04` |
-| Decision | 5 bytes | `"Hittt"` or `"Stand"` |
+| Decision | 5 bytes | `"Hit"` or `"Stand"` |
 
 **Server → Client:**
 | Field | Size | Description |
