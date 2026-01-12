@@ -291,7 +291,7 @@ class BlackjackServer:
 
                 if player_value > BUST_THRESHOLD:
                     # Player busts!
-                    print(f"💥 {client_name} BUSTS with {player_value}!")
+                    print(f"{COLOR_GREEN}💥 {client_name} BUSTS with {player_value}!{COLOR_RESET}")
                     conn.send_card(RESULT_LOSS, new_card.rank, new_card.suit)
                     return RESULT_LOSS
                 else:
@@ -315,7 +315,7 @@ class BlackjackServer:
 
             if dealer_value > BUST_THRESHOLD:
                 # Dealer busts - send card with WIN result
-                print(f"💥 Dealer BUSTS with {dealer_value}!")
+                print(f"{COLOR_RED}💥 Dealer BUSTS with {dealer_value}!{COLOR_RESET}")
                 conn.send_card(RESULT_WIN, new_card.rank, new_card.suit)
                 return RESULT_WIN
             else:
@@ -326,13 +326,13 @@ class BlackjackServer:
         print(f"\n📊 Final: {client_name}={player_value} vs Dealer={dealer_value}")
 
         if player_value > dealer_value:
-            print(f"🎉 {client_name} WINS!")
+            print(f"{COLOR_RED}🎉 {client_name} WINS!{COLOR_RESET}")
             result = RESULT_WIN
         elif dealer_value > player_value:
-            print(f"🏠 Dealer WINS!")
+            print(f"{COLOR_GREEN}🏠 Dealer WINS!{COLOR_RESET}")
             result = RESULT_LOSS
         else:
-            print(f"🤝 It's a TIE!")
+            print(f"{COLOR_YELLOW}🤝 It's a TIE!{COLOR_RESET}")
             result = RESULT_TIE
 
         # Send final result (all cards already sent, just need result)
