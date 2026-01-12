@@ -194,3 +194,14 @@ UDP_BUFFER_SIZE = 1024
 
 # Maximum TCP receive buffer
 TCP_BUFFER_SIZE = 1024
+
+# =============================================================================
+# TERMINAL COLORS (ANSI escape codes)
+# =============================================================================
+
+# Colors for terminal output
+COLOR_GREEN = "\033[92m"   # Bright green - for wins
+COLOR_RED = "\033[91m"     # Bright red - for losses
+COLOR_YELLOW = "\033[93m"  # Bright yellow - for ties
+COLOR_CYAN = "\033[96m"    # Bright cyan - for info
+COLOR_RESET = "\033[0m"    # Reset to default
