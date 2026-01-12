@@ -194,3 +194,65 @@ UDP_BUFFER_SIZE = 1024
 
 # Maximum TCP receive buffer
 TCP_BUFFER_SIZE = 1024
+
+# =============================================================================
+# TERMINAL COLORS (ANSI escape codes)
+# =============================================================================
+
+# Colors for terminal output
+COLOR_GREEN = "\033[92m"   # Bright green - for wins
+COLOR_RED = "\033[91m"     # Bright red - for losses
+COLOR_YELLOW = "\033[93m"  # Bright yellow - for ties
+COLOR_CYAN = "\033[96m"    # Bright cyan - for info
+COLOR_MAGENTA = "\033[95m" # Bright magenta - for party mode
+COLOR_RESET = "\033[0m"    # Reset to default
+
+# =============================================================================
+# SPECIAL MODES
+# =============================================================================
+
+# Mode constants
+MODE_NORMAL = 0
+MODE_AUTO = 1      # Bot plays using basic strategy
+MODE_PARTY = 2     # Drunk dealer, crazy effects
+
+
+# Party mode drunk messages
+PARTY_MESSAGES = {
+    "welcome": [
+        "🍺 *hic* Welcome to the PARTY table!",
+        "🎉 Wooooo! Let's goooo!",
+        "🥳 The dealer has had a few... this might be interesting!"
+    ],
+    "hit": [
+        "🍻 *hic* One more for the road!",
+        "🎊 YOLO! Gimme another!",
+        "🤪 Living dangerously, I like it!"
+    ],
+    "stand": [
+        "🍹 *hic* I'm good... I think...",
+        "😵‍💫 The room is spinning... I'll stay here",
+        "🛑 Whoaaaa steady there!"
+    ],
+    "win": [
+        "🎉🎉🎉 PARTY TIME! YOU WONNNN! 🎉🎉🎉",
+        "🍾 POP THE CHAMPAGNE! WINNER!",
+        "🥳🎊 WOOOOOOO HOOOOOOO!"
+    ],
+    "lose": [
+        "🍺 *hic* Oopsie woopsie!",
+        "😵 The dealer got lucky... or did you get unlucky?",
+        "🎭 It's fiiiiine, money is just paper anyway!"
+    ],
+    "dealer_cards": [
+        "🃏 *squints at cards*",
+        "🎴 Lemme see here... *drops cards*",
+        "🎲 *deals cards upside down* Oops!"
+    ]
+}
+
+# Auto-play basic strategy (simplified)
+# Key: (player_value, dealer_visible_value) -> 'hit' or 'stand'
+# This is a simplified version of basic blackjack strategy
+AUTO_STRATEGY_STAND_ON = 17  # Always stand on 17+
+AUTO_STRATEGY_HIT_ON = 11    # Always hit on 11 or less
