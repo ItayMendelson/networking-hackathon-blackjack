@@ -39,10 +39,46 @@ def get_local_ip() -> str:
     try:
         # Create a dummy socket to determine the local IP
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            # Try connecting to a public IP (doesn't actually send data)
             s.connect(("8.8.8.8", 80))
             return s.getsockname()[0]
     except Exception:
-        return "127.0.0.1"
+        # Fallback: try to get any non-localhost IP
+        try:
+            hostname = socket.gethostname()
+            return socket.gethostbyname(hostname)
+        except Exception:
+            return "127.0.0.1"
+
+
+def get_all_ips() -> list:
+    """
+    Get all IP addresses of this machine (for debugging).
+
+    Returns:
+        List of (interface_name, ip_address) tuples
+    """
+    ips = []
+    try:
+        hostname = socket.gethostname()
+        # Get all IPs associated with hostname
+        for ip in socket.gethostbyname_ex(hostname)[2]:
+            if not ip.startswith("127."):
+                ips.append(ip)
+    except Exception:
+        pass
+
+    # Also try the connect trick
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            if ip not in ips and not ip.startswith("127."):
+                ips.append(ip)
+    except Exception:
+        pass
+
+    return ips if ips else ["127.0.0.1"]
 
 
 # =============================================================================
@@ -54,11 +90,11 @@ class UDPBroadcaster:
     Handles UDP broadcast of server offer messages.
     Runs in a separate thread, broadcasting at regular intervals.
     """
-    
+
     def __init__(self, tcp_port: int, server_name: str):
         """
         Initialize the broadcaster.
-        
+
         Args:
             tcp_port: The TCP port clients should connect to
             server_name: The server's team name
@@ -68,42 +104,44 @@ class UDPBroadcaster:
         self.running = False
         self.socket: Optional[socket.socket] = None
         self.thread: Optional[threading.Thread] = None
-        
+
         # Pre-encode the offer message (it never changes)
         self.offer_message = encode_offer(tcp_port, server_name)
-    
+
     def start(self):
         """Start broadcasting offers in a background thread."""
         self.running = True
-        
+
         # Create UDP socket for broadcasting
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        
-        # SO_REUSEPORT is not available on Windows, use SO_REUSEADDR instead
-        # This allows multiple sockets to bind to the same port
-        if hasattr(socket, 'SO_REUSEPORT'):
+
+        # Always set SO_REUSEADDR for address reuse
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        # Also try SO_REUSEPORT if available (Linux/Mac)
+        try:
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        else:
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        
+        except (AttributeError, OSError):
+            pass
+
         # Start broadcast thread
         self.thread = threading.Thread(target=self._broadcast_loop, daemon=True)
         self.thread.start()
-    
+
     def stop(self):
         """Stop broadcasting and clean up resources."""
         self.running = False
         if self.socket:
             self.socket.close()
             self.socket = None
-    
+
     def _broadcast_loop(self):
         """Main broadcast loop. Runs in a separate thread."""
         while self.running:
             try:
                 self.socket.sendto(
-                    self.offer_message, 
+                    self.offer_message,
                     (BROADCAST_ADDRESS, UDP_BROADCAST_PORT)
                 )
                 # Non-busy wait between broadcasts
@@ -122,33 +160,36 @@ class UDPListener:
     """
     Handles listening for UDP server offer broadcasts.
     """
-    
+
     def __init__(self, port: int = UDP_BROADCAST_PORT):
         """
         Initialize the listener.
-        
+
         Args:
             port: The UDP port to listen on
         """
         self.port = port
-    
+
     def wait_for_offer(self, timeout: float = OFFER_TIMEOUT) -> Optional[Tuple[str, OfferMessage]]:
         """
         Wait for a server offer broadcast.
-        
+
         Args:
             timeout: Maximum time to wait in seconds
-            
+
         Returns:
             Tuple of (server_ip, OfferMessage) if received, None on timeout
         """
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        
-        # SO_REUSEPORT is not available on Windows, use SO_REUSEADDR instead
-        if hasattr(socket, 'SO_REUSEPORT'):
+
+        # Always set SO_REUSEADDR for address reuse
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        # Also try SO_REUSEPORT if available (Linux/Mac)
+        try:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        else:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        except (AttributeError, OSError):
+            pass
         
         try:
             sock.bind(('', self.port))

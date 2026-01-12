@@ -16,7 +16,9 @@ UDP_BROADCAST_PORT = 13122
 DEFAULT_TCP_PORT = 0
 
 # Broadcast address for UDP offers
-BROADCAST_ADDRESS = "255.255.255.255"
+# "<broadcast>" is a special Python string that resolves to the correct
+# subnet broadcast address, which works better than "255.255.255.255" on some networks
+BROADCAST_ADDRESS = "<broadcast>"
 
 # Offer broadcast interval in seconds
 OFFER_BROADCAST_INTERVAL = 1.0
@@ -215,7 +217,10 @@ COLOR_RESET = "\033[0m"    # Reset to default
 MODE_NORMAL = 0
 MODE_AUTO = 1      # Bot plays using basic strategy
 MODE_PARTY = 2     # Drunk dealer, crazy effects
+MODE_SPEED = 3     # 5 second decisions
 
+# Speed mode timeout
+SPEED_MODE_TIMEOUT = 5.0
 
 # Party mode drunk messages
 PARTY_MESSAGES = {
