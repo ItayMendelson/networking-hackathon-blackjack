@@ -9,6 +9,7 @@ Features:
 - Connects to server via TCP
 - Interactive gameplay with Hit/Stand decisions
 - Fun and engaging output with statistics
+- Special modes: Auto-Play, Party
 
 Usage:
     python client.py
@@ -17,17 +18,11 @@ Usage:
 
 import random
 import sys
+import time
 from typing import Optional, List
 
-from variables import (
-    DEFAULT_TEAM_NAME,
-    SUIT_SYMBOLS, RANKS, CARD_VALUES,
-    BUST_THRESHOLD,
-    RESULT_NOT_OVER, RESULT_TIE, RESULT_LOSS, RESULT_WIN,
-    RESULT_DISCONNECTED,
-    MESSAGES,
-    COLOR_GREEN, COLOR_RED, COLOR_YELLOW, COLOR_RESET
-)
+from variables import *
+
 from network import (
     UDPListener, TCPConnection
 )
@@ -86,6 +81,45 @@ def get_random_message(category: str) -> str:
     return random.choice(messages)
 
 
+def get_party_message(category: str) -> str:
+    """Get a random party mode message."""
+    messages = PARTY_MESSAGES.get(category, ["🎉"])
+    return random.choice(messages)
+
+
+def drunk_text(text: str) -> str:
+    """Make text look 'drunk' with random effects."""
+    effects = [
+        lambda t: t.replace('s', 'sh').replace('S', 'Sh'),
+        lambda t: t + " *hic*",
+        lambda t: t.upper() + "!",
+        lambda t: "".join(c.upper() if random.random() > 0.5 else c.lower() for c in t),
+        lambda t: t + " 🍺",
+    ]
+    return random.choice(effects)(text)
+
+
+def get_auto_decision(player_value: int, dealer_visible_value: int) -> str:
+    """
+    Get decision using basic blackjack strategy.
+
+    Simple strategy:
+    - Always hit on 11 or less
+    - Always stand on 17+
+    - In between: hit if dealer shows 7+, stand if dealer shows 6 or less
+    """
+    if player_value <= AUTO_STRATEGY_HIT_ON:
+        return 'hit'
+    if player_value >= AUTO_STRATEGY_STAND_ON:
+        return 'stand'
+
+    # 12-16: depends on dealer's visible card
+    if dealer_visible_value >= 7:
+        return 'hit'  # Dealer likely has strong hand
+    else:
+        return 'stand'  # Dealer might bust
+
+
 # =============================================================================
 # CLIENT CORE
 # =============================================================================
@@ -105,6 +139,8 @@ class BlackjackClient:
         """
         self.team_name = team_name
         self.running = False
+        self.mode = MODE_NORMAL  # Current game mode
+        self.dealer_visible_value = 0  # For auto-play strategy
 
         # Network component
         self.udp_listener = UDPListener()
@@ -120,6 +156,36 @@ class BlackjackClient:
         self.session_losses = 0
         self.session_ties = 0
 
+    def _select_mode(self) -> int:
+        """Let user select a game mode."""
+        print("\n" + "=" * 50)
+        print("🎮 SELECT GAME MODE")
+        print("=" * 50)
+        print(f"  {COLOR_GREEN}[1]{COLOR_RESET} 🎯 Normal Mode - Classic blackjack")
+        print(f"  {COLOR_CYAN}[2]{COLOR_RESET} 🤖 Auto-Play Mode - Bot uses basic strategy")
+        print(f"  {COLOR_MAGENTA}[3]{COLOR_RESET} 🎉 Party Mode - *hic* Things get weird...")
+        print("=" * 50)
+
+        while True:
+            try:
+                choice = input("\n🕹️  Choose mode (1-3): ").strip()
+
+                if choice == '1':
+                    print("\n🎯 Normal Mode selected - Good luck!")
+                    return MODE_NORMAL
+                elif choice == '2':
+                    print("\n🤖 Auto-Play Mode selected - Sit back and watch!")
+                    return MODE_AUTO
+                elif choice == '3':
+                    print(f"\n{COLOR_MAGENTA}🎉 PARTY MODE ACTIVATED! *hic* 🍺{COLOR_RESET}")
+                    time.sleep(0.5)
+                    return MODE_PARTY
+                else:
+                    print("⚠️ Please enter 1, 2, or 3!")
+
+            except (EOFError, KeyboardInterrupt):
+                return MODE_NORMAL
+
     def start(self):
         """Start the client and begin looking for servers."""
         self.running = True
@@ -128,6 +194,9 @@ class BlackjackClient:
         self._print_banner()
         print(f"🏷️  Playing as: {self.team_name}")
         print("=" * 60)
+
+        # Select game mode
+        self.mode = self._select_mode()
         print()
 
         # Main client loop
@@ -171,6 +240,7 @@ class BlackjackClient:
     def _get_num_rounds(self) -> int:
         """
         Get the number of rounds from the user.
+        Also allows changing mode.
 
         Returns:
             Number of rounds to play (1-255)
@@ -178,14 +248,27 @@ class BlackjackClient:
         Raises:
             KeyboardInterrupt: If user types 'exit' or presses Ctrl+C
         """
+        # Show current mode
+        mode_names = {
+            MODE_NORMAL: "🎯 Normal",
+            MODE_AUTO: "🤖 Auto-Play",
+            MODE_PARTY: "🎉 Party"
+        }
+
         while True:
             try:
                 print()
-                user_input = input("🎲 How many rounds would you like to play? (1-255, or 'exit'): ").strip()
+                print(f"Current mode: {mode_names.get(self.mode, 'Unknown')}")
+                user_input = input("🎲 Rounds (1-255), 'mode' to change, or 'exit': ").strip()
 
                 # Check for exit command
                 if user_input.lower() == 'exit':
                     raise KeyboardInterrupt
+
+                # Check for mode change
+                if user_input.lower() == 'mode':
+                    self.mode = self._select_mode()
+                    continue
 
                 num_rounds = int(user_input)
 
@@ -220,7 +303,14 @@ class BlackjackClient:
             # Connect to server
             print(f"🔌 Connecting to {server_name} at {server_ip}:{tcp_port}...")
             conn = TCPConnection.connect(server_ip, tcp_port)
-            print(f"✅ Connected! {get_random_message('welcome')}")
+
+            # Mode-specific welcome message
+            if self.mode == MODE_PARTY:
+                print(f"✅ Connected! {COLOR_MAGENTA}{get_party_message('welcome')}{COLOR_RESET}")
+            elif self.mode == MODE_AUTO:
+                print(f"✅ Connected! 🤖 Bot is ready to play!")
+            else:
+                print(f"✅ Connected! {get_random_message('welcome')}")
 
         except ConnectionError as e:
             print(f"❌ {e}")
@@ -320,10 +410,19 @@ class BlackjackClient:
                 return RESULT_DISCONNECTED
             dealer_cards.append(Card(payload.card_rank, payload.card_suit))
 
-            # Display initial hands
+            # Store dealer's visible value for auto-play strategy
+            self.dealer_visible_value = dealer_cards[0].value
+
+            # Display initial hands (with party mode effects if enabled)
             my_value = calculate_hand_value(my_cards)
-            print(f"\n🎴 Your hand: {format_hand(my_cards)} (Value: {my_value})")
-            print(f"🎴 Dealer shows: {format_hand(dealer_cards)} [🂠 Hidden]")
+            if self.mode == MODE_PARTY:
+                print(f"\n{COLOR_MAGENTA}{get_party_message('dealer_cards')}{COLOR_RESET}")
+                time.sleep(0.3)
+                print(f"🎴 Your hand: {format_hand(my_cards)} (Value: {drunk_text(str(my_value))})")
+                print(f"🎴 Dealer shows: {format_hand(dealer_cards)} [🂠 *hic* Hidden]")
+            else:
+                print(f"\n🎴 Your hand: {format_hand(my_cards)} (Value: {my_value})")
+                print(f"🎴 Dealer shows: {format_hand(dealer_cards)} [🂠 Hidden]")
 
             # ===== PLAYER TURN =====
             while True:
@@ -399,15 +498,28 @@ class BlackjackClient:
             print(f"\n{'─' * 40}")
             print(f"📊 FINAL: You = {my_value} | Dealer = {dealer_value}")
 
-            if result == RESULT_WIN:
-                if dealer_value > BUST_THRESHOLD:
-                    print(f"\n{COLOR_GREEN}🎉 {get_random_message('dealer_bust')}{COLOR_RESET}")
+            # Display result with mode-specific effects
+            if self.mode == MODE_PARTY:
+                # Party mode - extra crazy celebration/commiseration
+                if result == RESULT_WIN:
+                    print(f"\n{COLOR_MAGENTA}{'🎉' * 10}{COLOR_RESET}")
+                    print(f"{COLOR_MAGENTA}{get_party_message('win')}{COLOR_RESET}")
+                    print(f"{COLOR_MAGENTA}{'🎊' * 10}{COLOR_RESET}")
+                elif result == RESULT_LOSS:
+                    print(f"\n{COLOR_MAGENTA}{get_party_message('lose')}{COLOR_RESET}")
                 else:
-                    print(f"\n{COLOR_GREEN}🎉 {get_random_message('win')}{COLOR_RESET}")
-            elif result == RESULT_LOSS:
-                print(f"\n{COLOR_RED}😢 {get_random_message('lose')}{COLOR_RESET}")
+                    print(f"\n{COLOR_MAGENTA}🍺 *hic* It's a tie... another round? 🍻{COLOR_RESET}")
             else:
-                print(f"\n{COLOR_YELLOW}🤝 {get_random_message('tie')}{COLOR_RESET}")
+                # Normal/Auto
+                if result == RESULT_WIN:
+                    if dealer_value > BUST_THRESHOLD:
+                        print(f"\n{COLOR_GREEN}🎉 {get_random_message('dealer_bust')}{COLOR_RESET}")
+                    else:
+                        print(f"\n{COLOR_GREEN}🎉 {get_random_message('win')}{COLOR_RESET}")
+                elif result == RESULT_LOSS:
+                    print(f"\n{COLOR_RED}😢 {get_random_message('lose')}{COLOR_RESET}")
+                else:
+                    print(f"\n{COLOR_YELLOW}🤝 {get_random_message('tie')}{COLOR_RESET}")
 
             return result
 
@@ -418,6 +530,7 @@ class BlackjackClient:
     def _get_decision(self, current_value: int) -> str:
         """
         Get the player's hit/stand decision.
+        Handles different modes: normal, auto-play, party
 
         Args:
             current_value: Current hand value
@@ -425,6 +538,45 @@ class BlackjackClient:
         Returns:
             "hit" or "stand"
         """
+        # === AUTO-PLAY MODE ===
+        if self.mode == MODE_AUTO:
+            decision = get_auto_decision(current_value, self.dealer_visible_value)
+            print(f"\n🤖 Hand value: {current_value} | Dealer shows: {self.dealer_visible_value}")
+            time.sleep(0.8)  # Dramatic pause
+            if decision == 'hit':
+                print(f"🤖 Bot decision: {COLOR_CYAN}HIT{COLOR_RESET} (basic strategy)")
+            else:
+                print(f"🤖 Bot decision: {COLOR_YELLOW}STAND{COLOR_RESET} (basic strategy)")
+            time.sleep(0.5)
+            return decision
+
+        # === PARTY MODE ===
+        if self.mode == MODE_PARTY:
+            print(f"\n{COLOR_MAGENTA}🍺 Your hand value: {drunk_text(str(current_value))}{COLOR_RESET}")
+            while True:
+                try:
+                    prompt = random.choice([
+                        "   *hic* [H]it or [S]tand? ",
+                        "   🍻 Wanna [H]it or [S]tand? ",
+                        "   🎉 [H]ITTTT or [S]TANDDDD? ",
+                    ])
+                    choice = input(prompt).strip().lower()
+
+                    if choice in ['h', 'hit']:
+                        print(f"{COLOR_MAGENTA}{get_party_message('hit')}{COLOR_RESET}")
+                        time.sleep(0.3)
+                        return 'hit'
+                    elif choice in ['s', 'stand']:
+                        print(f"{COLOR_MAGENTA}{get_party_message('stand')}{COLOR_RESET}")
+                        time.sleep(0.3)
+                        return 'stand'
+                    else:
+                        print(f"{COLOR_MAGENTA}🍺 Whaaaat? Try again... *hic*{COLOR_RESET}")
+
+                except EOFError:
+                    return 'stand'
+
+        # === NORMAL MODE ===
         while True:
             try:
                 print(f"\n🤔 Your hand value: {current_value}")

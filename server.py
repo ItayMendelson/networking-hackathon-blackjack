@@ -21,14 +21,7 @@ import random
 import sys
 from typing import List, Tuple
 
-from variables import (
-    DEFAULT_TCP_PORT, DEFAULT_TEAM_NAME,
-    SUIT_SYMBOLS, RANKS, CARD_VALUES,
-    DEALER_STAND_THRESHOLD, BUST_THRESHOLD,
-    RESULT_NOT_OVER, RESULT_TIE, RESULT_LOSS, RESULT_WIN,
-    PLAYER_DECISION_TIMEOUT,
-    COLOR_GREEN, COLOR_RED, COLOR_YELLOW, COLOR_RESET
-)
+from variables import *
 from network import (
     UDPBroadcaster, TCPServer, TCPConnection,
     get_local_ip
