@@ -214,6 +214,10 @@ def decode_request(data: bytes) -> Optional[RequestMessage]:
         if msg_type != MSG_TYPE_REQUEST:
             return None
         
+        # Validate num_rounds is at least 1
+        if num_rounds < 1:
+            return None
+        
         # Decode client name
         client_name = name_bytes.rstrip(b'\x00').decode('utf-8', errors='replace')
         

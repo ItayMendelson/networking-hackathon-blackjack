@@ -43,7 +43,7 @@ RESULT_WIN = 0x03
 RESULT_DISCONNECTED = -1  # Used when connection is lost
 
 # Player decisions (5 bytes each, as per spec)
-DECISION_HIT = b"Hit"
+DECISION_HIT = b"Hittt"
 DECISION_STAND = b"Stand"
 
 # Team name max length
@@ -69,7 +69,7 @@ SUIT_SYMBOLS = {
     3: "♠"
 }
 
-# Card ranks (1-13)
+# Card ranks (1-13) - face cards show their blackjack value for clarity
 RANKS = {
     1: "A",
     2: "2",
@@ -81,9 +81,9 @@ RANKS = {
     8: "8",
     9: "9",
     10: "10",
-    11: "J",
-    12: "Q",
-    13: "K"
+    11: "J(10)",
+    12: "Q(10)",
+    13: "K(10)"
 }
 
 # Card values for blackjack scoring

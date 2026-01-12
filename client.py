@@ -173,11 +173,18 @@ class BlackjackClient:
         
         Returns:
             Number of rounds to play (1-255)
+            
+        Raises:
+            KeyboardInterrupt: If user types 'exit' or presses Ctrl+C
         """
         while True:
             try:
                 print()
-                user_input = input("🎲 How many rounds would you like to play? (1-255): ").strip()
+                user_input = input("🎲 How many rounds would you like to play? (1-255, or 'exit'): ").strip()
+                
+                # Check for exit command
+                if user_input.lower() == 'exit':
+                    raise KeyboardInterrupt
                 
                 num_rounds = int(user_input)
                 

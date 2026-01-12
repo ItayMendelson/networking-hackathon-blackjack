@@ -320,11 +320,15 @@ class BlackjackServer:
             print(f"🎴 Dealer's hand: {format_hand(dealer_cards)} (Value: {dealer_value})")
             
             if dealer_value > BUST_THRESHOLD:
+                # Dealer busts - send card with WIN result
                 print(f"💥 Dealer BUSTS with {dealer_value}!")
                 conn.send_card(RESULT_WIN, new_card.rank, new_card.suit)
                 return RESULT_WIN
+            else:
+                # Dealer continues - send card with NOT_OVER so client can display it
+                conn.send_card(RESULT_NOT_OVER, new_card.rank, new_card.suit)
         
-        # ===== DETERMINE WINNER =====
+        # ===== DETERMINE WINNER (dealer stood at 17+) =====
         print(f"\n📊 Final: {client_name}={player_value} vs Dealer={dealer_value}")
         
         if player_value > dealer_value:
@@ -337,11 +341,8 @@ class BlackjackServer:
             print(f"🤝 It's a TIE!")
             result = RESULT_TIE
         
-        # Send final result
-        if len(dealer_cards) > 2:
-            conn.send_card(result, dealer_cards[-1].rank, dealer_cards[-1].suit)
-        else:
-            conn.send_result(result)
+        # Send final result (all cards already sent, just need result)
+        conn.send_result(result)
         
         return result
     

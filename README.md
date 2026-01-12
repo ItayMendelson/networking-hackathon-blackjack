@@ -52,9 +52,9 @@ blackjack/
 
 ### Start the Server (Dealer)
 ```bash
-python server.py                          # Default team name
-python server.py "My Awesome Team"        # Custom team name
-python server.py "Team Name" 12345        # Custom team name and port
+python server.py                          # Default Server name
+python server.py "My Awesome Server"        # Custom Server name
+python server.py "Server Name" 12345        # Custom Server name and port
 ```
 
 ### Start the Client (Player)
