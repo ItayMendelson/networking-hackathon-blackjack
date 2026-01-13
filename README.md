@@ -136,7 +136,7 @@ Edit `variables.py` to customize:
 
 ## 👥 Team
 
-**The Socket Wizards** 🧙‍♂️
+**Itay & Einav** 🧙‍♂️
 
 ---
 
