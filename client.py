@@ -123,7 +123,9 @@ class BlackjackClient:
         print("=" * 60)
 
     def _get_num_rounds(self):
-        """Ask the user how many rounds to play."""
+        """Ask the user how many rounds to play. 255 is the maximum as the
+         protocol uses one Byte for the number of rounds:
+          2^8-1 (0 rounds) = 255"""
         while True:
             try:
                 rounds_input = input("\n🎮 How many rounds would you like to play? (1-255): ").strip()
@@ -196,7 +198,7 @@ class BlackjackClient:
             conn.close()
             print("\n🔌 Disconnected from server")
 
-    def _play_round(self, conn: TCPConnection, round_num: int) -> int:
+    def _play_round(self, conn: TCPConnection, round_num):
         """
         Play a single round.
         Returns RESULT_WIN, RESULT_LOSS, RESULT_TIE, or -1 for disconnect.
