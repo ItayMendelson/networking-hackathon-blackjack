@@ -8,7 +8,7 @@ All constants and configuration values.
 # NETWORK CONFIGURATION
 # =============================================================================
 
-# UDP port for broadcast offers (MUST be 13122 per assignment spec)
+# UDP port for broadcast offers
 UDP_BROADCAST_PORT = 13122
 
 # TCP port - 0 means OS assigns an available port
@@ -87,7 +87,7 @@ TCP_BUFFER_SIZE = 1024
 # DISPLAY
 # =============================================================================
 
-DEFAULT_TEAM_NAME = "The Socket Wizards"
+DEFAULT_TEAM_NAME = "Itay and Einav"
 
 # Terminal colors (ANSI)
 COLOR_GREEN = "\033[92m"
