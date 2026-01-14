@@ -36,7 +36,7 @@ ClientPayload = namedtuple('ClientPayload', ['decision'])
 # PROTOCOL: ENCODING FUNCTIONS
 # =============================================================================
 
-def _prepare_name(name: str) -> bytes:
+def _prepare_name(name):
     """Prepare a team name: truncate or pad to 32 bytes."""
     name_bytes = name.encode('utf-8')
     if len(name_bytes) > TEAM_NAME_LENGTH:
@@ -44,7 +44,7 @@ def _prepare_name(name: str) -> bytes:
     return name_bytes.ljust(TEAM_NAME_LENGTH, b'\x00')
 
 
-def encode_offer(tcp_port: int, server_name: str) -> bytes:
+def encode_offer(tcp_port, server_name):
     """
     Encode server offer message for UDP broadcast.
     Format: Magic(4) + Type(1) + Port(2) + Name(32) = 39 bytes
@@ -53,7 +53,7 @@ def encode_offer(tcp_port: int, server_name: str) -> bytes:
     return struct.pack(">IBH32s", MAGIC_COOKIE, MSG_TYPE_OFFER, tcp_port, name_bytes)
 
 
-def encode_request(num_rounds: int, client_name: str) -> bytes:
+def encode_request(num_rounds, client_name):
     """
     Encode client request message for TCP.
     Format: Magic(4) + Type(1) + Rounds(1) + Name(32) = 38 bytes
@@ -64,7 +64,7 @@ def encode_request(num_rounds: int, client_name: str) -> bytes:
     return struct.pack(">IBB32s", MAGIC_COOKIE, MSG_TYPE_REQUEST, num_rounds, name_bytes)
 
 
-def encode_server_payload(result: int, card_rank: int = 0, card_suit: int = 0) -> bytes:
+def encode_server_payload(result, card_rank=0, card_suit=0):
     """
     Encode server payload message for TCP.
     Format: Magic(4) + Type(1) + Result(1) + Rank(2) + Suit(1) = 9 bytes
@@ -72,7 +72,7 @@ def encode_server_payload(result: int, card_rank: int = 0, card_suit: int = 0) -
     return struct.pack(">IBBHB", MAGIC_COOKIE, MSG_TYPE_PAYLOAD, result, card_rank, card_suit)
 
 
-def encode_client_payload(decision: str) -> bytes:
+def encode_client_payload(decision):
     """
     Encode client payload (decision) message for TCP.
     Format: Magic(4) + Type(1) + Decision(5) = 10 bytes
@@ -92,7 +92,7 @@ def encode_client_payload(decision: str) -> bytes:
 # PROTOCOL: DECODING FUNCTIONS
 # =============================================================================
 
-def decode_offer(data: bytes):
+def decode_offer(data):
     """Decode server offer message from UDP. Returns None if invalid."""
     if len(data) < 39:
         return None
@@ -106,7 +106,7 @@ def decode_offer(data: bytes):
         return None
 
 
-def decode_request(data: bytes):
+def decode_request(data):
     """Decode client request message from TCP. Returns None if invalid."""
     if len(data) < 38:
         return None
@@ -122,7 +122,7 @@ def decode_request(data: bytes):
         return None
 
 
-def decode_server_payload(data: bytes):
+def decode_server_payload(data):
     """Decode server payload message from TCP. Returns None if invalid."""
     if len(data) < 9:
         return None
@@ -135,7 +135,7 @@ def decode_server_payload(data: bytes):
         return None
 
 
-def decode_client_payload(data: bytes):
+def decode_client_payload(data):
     """Decode client payload (decision) message from TCP. Returns None if invalid."""
     if len(data) < 10:
         return None
@@ -158,7 +158,7 @@ def decode_client_payload(data: bytes):
 # UTILITY FUNCTIONS
 # =============================================================================
 
-def get_local_ip() -> str:
+def get_local_ip():
     """Get the local IP address of this machine."""
     try:
         # Create a dummy connection to find our IP
@@ -180,7 +180,7 @@ def get_local_ip() -> str:
 class UDPBroadcaster:
     """Handles UDP broadcast of server offer messages."""
 
-    def __init__(self, tcp_port: int, server_name: str):
+    def __init__(self, tcp_port, server_name):
         self.tcp_port = tcp_port
         self.server_name = server_name
         self.running = False
@@ -260,7 +260,7 @@ class UDPBroadcaster:
 class UDPListener:
     """Handles listening for UDP server offer broadcasts."""
 
-    def __init__(self, port: int = UDP_BROADCAST_PORT):
+    def __init__(self, port=UDP_BROADCAST_PORT):
         self.port = port
         self.socket = None
 
@@ -269,7 +269,7 @@ class UDPListener:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        # Allow multiple clients on same machine (for testing)
+        # Allow multiple clients on same machine
         try:
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         except (AttributeError, OSError):
@@ -278,7 +278,7 @@ class UDPListener:
         # Bind to all interfaces
         self.socket.bind(("", self.port))
 
-    def wait_for_offer(self, timeout: float = OFFER_TIMEOUT):
+    def wait_for_offer(self, timeout=OFFER_TIMEOUT):
         """
         Wait for a server offer broadcast.
         Returns (server_ip, offer_message) or None on timeout.
@@ -325,18 +325,18 @@ class UDPListener:
 class TCPServer:
     """Handles TCP server operations."""
 
-    def __init__(self, port: int = 0):
+    def __init__(self, port=0):
         self.requested_port = port
         self.actual_port = 0
         self.socket = None
         self.running = False
 
-    def bind(self) -> int:
+    def bind(self):
         """Bind to the port and return the actual port number."""
         if self.socket is None:
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Socket Constructor
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            # Bind to all interfaces (important for cross-machine!)
+            # Bind to all interfaces
             self.socket.bind(('0.0.0.0', self.requested_port))
             self.actual_port = self.socket.getsockname()[1]
         return self.actual_port
@@ -398,14 +398,14 @@ class TCPConnection:
     SERVER_PAYLOAD_SIZE = 9  # Server payload size
     CLIENT_PAYLOAD_SIZE = 10 # Client payload size
 
-    def __init__(self, sock: socket.socket, timeout: float = TCP_TIMEOUT):
+    def __init__(self, sock, timeout=TCP_TIMEOUT):
         self.socket = sock
         self.socket.settimeout(timeout)
         self._closed = False
         self._buffer = b""
 
     @classmethod
-    def connect(cls, host: str, port: int, timeout: float = TCP_TIMEOUT):
+    def connect(cls, host, port, timeout=TCP_TIMEOUT):
         """Create a new connection to a server."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(timeout)
@@ -416,7 +416,7 @@ class TCPConnection:
             sock.close()
             raise ConnectionError(f"Failed to connect to {host}:{port}: {e}")
 
-    def set_timeout(self, timeout: float):
+    def set_timeout(self, timeout):
         """Set the socket timeout."""
         self.socket.settimeout(timeout)
 
@@ -429,11 +429,11 @@ class TCPConnection:
             except Exception:
                 pass
 
-    def is_closed(self) -> bool:
+    def is_closed(self):
         """Check if connection is closed."""
         return self._closed
 
-    def _send_raw(self, data: bytes) -> bool:
+    def _send_raw(self, data):
         """Send raw bytes."""
         try:
             self.socket.sendall(data)
@@ -442,7 +442,7 @@ class TCPConnection:
             print(f"⚠️ Send error: {e}")
             return False
 
-    def _receive_exact(self, num_bytes: int):
+    def _receive_exact(self, num_bytes):
         """Receive exactly num_bytes using buffered I/O."""
         while len(self._buffer) < num_bytes:
             try:
@@ -464,7 +464,7 @@ class TCPConnection:
 
     # =========== HIGH-LEVEL MESSAGE METHODS ===========
 
-    def send_request(self, num_rounds: int, client_name: str) -> bool:
+    def send_request(self, num_rounds, client_name):
         """Send a game request to the server."""
         data = encode_request(num_rounds, client_name)
         return self._send_raw(data)
@@ -476,12 +476,12 @@ class TCPConnection:
             return None
         return decode_request(data)
 
-    def send_card(self, result: int, card_rank: int, card_suit: int) -> bool:
+    def send_card(self, result, card_rank, card_suit):
         """Send a card to the client."""
         data = encode_server_payload(result, card_rank, card_suit)
         return self._send_raw(data)
 
-    def send_result(self, result: int) -> bool:
+    def send_result(self, result):
         """Send just a result (no card)."""
         return self.send_card(result, 0, 0)
 
@@ -492,7 +492,7 @@ class TCPConnection:
             return None
         return decode_server_payload(data)
 
-    def send_decision(self, decision: str) -> bool:
+    def send_decision(self, decision: str):
         """Send a hit/stand decision to the server."""
         try:
             data = encode_client_payload(decision)
