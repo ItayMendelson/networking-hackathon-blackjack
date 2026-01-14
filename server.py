@@ -13,8 +13,6 @@ Usage:
 
 import random
 import sys
-
-
 from variables import *
 from network_protocol import *
 
@@ -58,6 +56,7 @@ class Deck:
 
     def reset(self):
         """Reset and shuffle the deck."""
+        # Creates all 52 cards
         self.cards = [Card(rank, suit) for suit in range(4) for rank in range(1, 14)]
         random.shuffle(self.cards)
 
